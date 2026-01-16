@@ -1,0 +1,62 @@
+# Python bytecode / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# Python packaging / build
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# C++ / CMake build artifacts
+market_engine/build/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+Makefile
+*.cmake
+!CMakeLists.txt
+*.o
+*.obj
+*.so
+*.dll
+*.dylib
+*.pdb
+
+# IDE / editor settings
+.vscode/
+.idea/
+*.iml
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Logs and runtime artifacts
+*.log
+logs/
+*.sqlite3
+market_data.db
+
+# Environment / secrets
+.env.local
+.env.*
+!.env.example
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
