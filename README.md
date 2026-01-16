@@ -320,9 +320,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/market-data-engine/issues)
+- **Issues**: [GitHub Issues](https://github.com/bestfranklinAI/crypto-analysis/issues)
 - **Documentation**: [docs/](docs/)
-- **Email**: your.email@example.com
+- **Email**: franklin123ann@gmail.com
 
 ---
 
