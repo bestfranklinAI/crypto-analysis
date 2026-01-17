@@ -4,7 +4,7 @@
 #include <vector>
 #include <deque>
 #include <string>
-#include <ctime>
+#include <optional>
 
 
 namespace market_engine{
@@ -13,13 +13,13 @@ struct Trade {
     double price;
     double quantity;
     long long timestamp;
-    bool is_buyer_market;
+    bool is_buyer_maker;
 };
 
 struct IndicatorResult{
     std::string symbol;
     double vwap;
-    double ris;
+    double rsi;
     long long timestamp;
     bool is_valid;
 };
