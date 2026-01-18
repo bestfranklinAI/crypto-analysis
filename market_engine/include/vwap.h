@@ -7,19 +7,25 @@
 
 namespace market_engine{
 
-    class VWAPCalculator{
+    class VWAPCalculator: public IndicatorCalculator{
         public:
-            explicit VWAPCalculator(size_t window_size = 1000);
+            explicit VWAPCalculator(const std::string& symbol, size_t window_size = 1000);
 
-            void add_trade(double price, double quantity, long long timestamp);
-            double get_vwap() const;
+            void add_trade(const Trade& trade) override;
+            std::optional<IndicatorResult> get_current() const override;
             void clear();
+
+            //VWAP specific methods
+            double get_vwap() const;
+            void add_trade_direct(double price, double quantity, long long timestamp);
         
         private:
+            std:: string symbol_;
             size_t window_size_;
             std::deque<Trade> trades_;
             double cumulative_pq_;
             double cumulative_q_;
+            long long last_timestamp_;
 
             void update_rolling_window();
     };
