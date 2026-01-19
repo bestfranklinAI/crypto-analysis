@@ -21,22 +21,29 @@ Endpoints:
 
 
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, concurrency
 from app.services.orchestration import OrchestrationService
 from app.config import settings
 import logging
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title = "Market Data Engine")
+app = FastAPI(title = "Market Data Engine", lifespan=lifespan)
 
 orchestration: OrchestrationService = None
 
-@app.on_event("startup")
-async def startup_event():
+@concurrency.asynccontextmanager
+async def lifespan(app: FastAPI):
+    # --- Startup Logic ---
     global orchestration
     orchestration = OrchestrationService()
     logger.info("FastAPI server started.")
+    
+    yield  # The application runs while this is suspended
+    
+    # --- Shutdown Logic ---
+    # Put any cleanup code here (closing DB sessions, etc.)
+    logger.info("FastAPI server shutting down.")
     
     
 @app.get("/health")
