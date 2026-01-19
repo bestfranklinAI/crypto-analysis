@@ -14,10 +14,10 @@ namespace market_engine{
             void clear() override;
 
             //RSI specific methods
-            void add_price(double price);
-            double get_rsi() const;
-            bool is_ready() const;
-        
+        void add_price(double price, long long timestamp);
+        double get_rsi() const;
+        bool is_ready() const;
+        bool has_data() const;
         private:
         std:: string symbol_;
             size_t period_;

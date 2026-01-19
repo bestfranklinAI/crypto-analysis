@@ -29,7 +29,7 @@ namespace market_engine{
     }
 
     void VWAPCalculator::clear(){
-        trades._clear();
+        trades_.clear();
         cumulative_pq_ = 0.0;
         cumulative_q_ = 0.0;
         last_timestamp_ = 0;

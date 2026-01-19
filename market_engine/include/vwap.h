@@ -13,13 +13,12 @@ namespace market_engine{
 
             void add_trade(const Trade& trade) override;
             std::optional<IndicatorResult> get_current() const override;
-            void clear();
+        void clear() override;
 
-            //VWAP specific methods
-            double get_vwap() const;
-            void add_trade_direct(double price, double quantity, long long timestamp);
-        
-        private:
+        //VWAP specific methods
+        double get_vwap() const;
+        void add_trade_direct(double price, double quantity, long long timestamp);
+        bool has_data() const;
             std:: string symbol_;
             size_t window_size_;
             std::deque<Trade> trades_;

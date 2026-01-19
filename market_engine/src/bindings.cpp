@@ -60,13 +60,47 @@ class MultiSymbolIndicatorEngine{
 
         //Process a trade and update indicators for its symbol
         void process_trade(const Trade& trade){
-            //pass
+            auto& state = get_or_create_state(trade.symbol);
+            
+            // Update both calculators
+            state.vwap_calc->add_trade(trade);
+            state.rsi_calc->add_trade(trade);
         }
 
 
         //Get current indicator values for a symbol
-
-        std::optional<IndicatorResult> get_indicators(const std::string &symbol) const {}
+        std::optional<IndicatorResult> get_indicators(const std::string &symbol) const {
+            auto it = symbol_states_.find(symbol);
+            if (it == symbol_states_.end()) {
+                return std::nullopt;
+            }
+            
+            const auto& state = it->second;
+            
+            // Combine results from both calculators
+            IndicatorResult result;
+            result.symbol = symbol;
+            result.vwap = state.vwap_calc->get_vwap();
+            result.rsi = state.rsi_calc->get_rsi();
+            
+            // Get the latest timestamp from either calculator
+            auto vwap_result = state.vwap_calc->get_current();
+            auto rsi_result = state.rsi_calc->get_current();
+            
+            if (vwap_result && rsi_result) {
+                result.timestamp = std::max(vwap_result->timestamp, rsi_result->timestamp);
+            } else if (vwap_result) {
+                result.timestamp = vwap_result->timestamp;
+            } else if (rsi_result) {
+                result.timestamp = rsi_result->timestamp;
+            } else {
+                result.timestamp = 0;
+            }
+            
+            result.is_valid = state.rsi_calc->is_ready();
+            
+            return result;
+        }
 
 
 
@@ -78,7 +112,7 @@ class MultiSymbolIndicatorEngine{
 
         //clear all symbols and reset engine
         void clear_all(){
-            symbol_states_.clear()
+            symbol_states_.clear();
         }
 
     private:
@@ -106,8 +140,7 @@ class MultiSymbolIndicatorEngine{
         size_t rsi_period_;
         std::unordered_map<std::string, SymbolState> symbol_states_;
 
-
-}
+};
 
 
 
@@ -150,10 +183,21 @@ PYBIND11_MODULE(market_engine, m){
     py::arg("vwap_window") = 1000, 
     py::arg("rsi_period") = 14,
     "Create indicator engine with configurable parameters.")
-    .def("process_trade", &MultiSymbolIndicatorEngine::process_trade, py::arg("trade"), "Process a trade to update indicators.")
-    .def("get_indicators", &MultiSymbolIndicatorEngine::get_indicators, py::arg("symbol"), "Get current indicators for a symbol.")
-    .def("clear_symbol", &MultiSymbolIndicatorEngine::clear_symbol, py::arg("symbol"), "Clear data for a specific symbol.")
-    .def("clear_all", &MultiSymbolIndicatorEngine::clear_all, "Clear all data for all symbols.");
+    .def("process_trade", 
+        &MultiSymbolIndicatorEngine::process_trade,
+        py::arg("trade"), 
+        "Process a trade to update indicators.")
+    .def("get_indicators", 
+        &MultiSymbolIndicatorEngine::get_indicators, 
+        py::arg("symbol"), 
+        "Get current indicators for a symbol.")
+    .def("clear_symbol", 
+        &MultiSymbolIndicatorEngine::clear_symbol, 
+        py::arg("symbol"), 
+        "Clear data for a specific symbol.")
+    .def("clear_all", 
+        &MultiSymbolIndicatorEngine::clear_all, 
+        "Clear all data for all symbols.");
 
 }
 

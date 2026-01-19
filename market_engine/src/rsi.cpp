@@ -18,12 +18,12 @@ namespace market_engine{
 
 
     void RSICalculator::add_trade(const Trade& trade){
-        add_price(trade.price);
+        add_price(trade.price, trade.timestamp);
     }
 
     std::optional<IndicatorResult> RSICalculator::get_current() const{
         if (!has_data()){
-            return std::nullopt:
+            return std::nullopt;
         }
 
         IndicatorResult result;
@@ -37,14 +37,14 @@ namespace market_engine{
     }
 
     void RSICalculator::clear(){
-        prices._clear();
-        avg_gain = 0.0;
+        prices_.clear();
+        avg_gain_ = 0.0;
         avg_loss_ = 0.0;
         initialized_ = false;
         last_timestamp_ = 0;
     }
 
-    void RSICalculator:: add_price(double price, long long timestamp){
+    void RSICalculator::add_price(double price, long long timestamp){
         prices_.push_back(price);
         last_timestamp_ = timestamp;
 
@@ -78,7 +78,7 @@ namespace market_engine{
                 total_loss += -change;
             }
         }
-        avg_gain = total_gain / period_;
+        avg_gain_ = total_gain / period_;
         avg_loss_ = total_loss / period_;
 
     }
@@ -90,7 +90,7 @@ namespace market_engine{
     }
 
     double RSICalculator::get_rsi() const{
-        if(!initialized_ || avg_loss == 0.0){
+        if(!initialized_ || avg_loss_ == 0.0){
             return 50.0;
         }
 
@@ -98,7 +98,7 @@ namespace market_engine{
         return 100.0 - (100.0 / (1.0 +rs));
     }
 
-    bool RSICalculator::has_data() const{
+    bool RSICalculator::is_ready() const{
         return initialized_;
     }
 
