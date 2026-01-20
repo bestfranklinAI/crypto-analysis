@@ -84,8 +84,8 @@ class BinanceWebSocketConsumer:
                                     'timestamp': data.get('T'),
                                     'is_buyer_maker': data.get('m')
                                 }
-                            
-                            await self.on_trade_callback(trade)
+                                
+                                await self.on_trade_callback(trade)
                             
                         except json.JSONDecodeError:
                             logger.warning(f"Failed to parse message: {message[:100]}")
@@ -112,7 +112,7 @@ class BinanceWebSocketConsumer:
         """Signal consumer to stop."""
         logger.info("Stopping Binance WebSocket Consumer...")
         self.is_running = False
-        if self._task and not self.task.done():
+        if self._task and not self._task.done():
             self._task.cancel()
 
 ## For testing

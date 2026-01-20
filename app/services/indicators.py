@@ -20,7 +20,7 @@ Responsibilities:
 # - Thread-safe operations
 
 
-import market_engine
+import app.services.market_engine as market_engine
 from typing import Dict, Optional
 import logging
 
@@ -30,25 +30,25 @@ logger = logging.getLogger(__name__)
 class IndicatorService:
     """Manage C++ indicator engine for mulitple symbols."""
     
-    def __init__(self, wrap_window: int = 1000, rsi_period: int = 14):
+    def __init__(self, vwap_window: int = 1000, rsi_period: int = 14):
         """
         Initialize the IndicatorService.
         Args:
-            wrap_window: Max number of trades to retain per symbol
+            vwap_window: Max number of trades to retain per symbol
             rsi_period: Period for RSI calculation
         """
-        self.engine = market_engine.IndicatorEngine(wrap_window, rsi_period)
-        logger.info("IndicatorService initialized with wrap_window=%d, rsi_period=%d", wrap_window, rsi_period)
+        self.engine = market_engine.IndicatorEngine(vwap_window, rsi_period)
+        logger.info("IndicatorService initialized with vwap_window=%d, rsi_period=%d", vwap_window, rsi_period)
         
         
-    def add_trade(self, trade: dict) -> None:
+    def add_trade(self, trade_data: dict) -> None:
         """Add a trade to the engine."""
         trade = market_engine.Trade()
-        trade.symbol = trade['symbol']
-        trade.price = trade['price']
-        trade.quantity = trade['quantity']
-        trade.timestamp = trade['timestamp']
-        trade.is_buyer_maker = trade['is_buyer_maker']
+        trade.symbol = trade_data['symbol']
+        trade.price = trade_data['price']
+        trade.quantity = trade_data['quantity']
+        trade.timestamp = trade_data['timestamp']
+        trade.is_buyer_maker = trade_data['is_buyer_maker']
         
         self.engine.process_trade(trade)
         
