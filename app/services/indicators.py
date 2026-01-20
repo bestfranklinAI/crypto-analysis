@@ -18,3 +18,60 @@ Responsibilities:
 # - Indicator snapshot retrieval
 # - Simple signal generation (BUY/SELL/HOLD based on RSI)
 # - Thread-safe operations
+
+
+import app.services.market_engine as market_engine
+from typing import Dict, Optional
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class IndicatorService:
+    """Manage C++ indicator engine for mulitple symbols."""
+    
+    def __init__(self, vwap_window: int = 1000, rsi_period: int = 14):
+        """
+        Initialize the IndicatorService.
+        Args:
+            vwap_window: Max number of trades to retain per symbol
+            rsi_period: Period for RSI calculation
+        """
+        self.engine = market_engine.IndicatorEngine(vwap_window, rsi_period)
+        logger.info("IndicatorService initialized with vwap_window=%d, rsi_period=%d", vwap_window, rsi_period)
+        
+        
+    def add_trade(self, trade_data: dict) -> None:
+        """Add a trade to the engine."""
+        trade = market_engine.Trade()
+        trade.symbol = trade_data['symbol']
+        trade.price = trade_data['price']
+        trade.quantity = trade_data['quantity']
+        trade.timestamp = trade_data['timestamp']
+        trade.is_buyer_maker = trade_data['is_buyer_maker']
+        
+        self.engine.process_trade(trade)
+        
+    def get_indicators(self, symbol: str) -> Optional[Dict]:
+        """Get current indicators for a symbol."""
+        result = self.engine.get_indicators(symbol)
+        
+        if result is None:
+            return None
+        
+        return{
+            "symbol": result.symbol,
+            "vwap": result.vwap,
+            "rsi": result.rsi,
+            "timestamp": result.timestamp,
+            "is_valid": result.is_valid
+        }
+        
+    
+    def clear_symbol(self, symbol: str) -> None:
+        """Clear data for a specific symbol."""
+        self.engine.clear_symbol(symbol)
+        
+    def clear_all(self) -> None:
+        """Clear data for all symbols."""
+        self.engine.clear_all()

@@ -12,126 +12,123 @@ Run with: python main.py
 
 import asyncio
 import signal
-import sys
-from typing import Optional
-
-# TODO: Import modules once implemented
-# from app.config import settings
-# from app.binance_consumer import BinanceWebSocketConsumer
-# from app.api_server import app
-# from app.services.orchestration import OrchestrationService
+import logging
+from app.config import settings
+from app.binance_consumer import BinanceWebSocketConsumer
+from app.api_server import app
+from app.services.orchestration import OrchestrationService
+import uvicorn
 
 
-class MarketDataEngine:
-    """
-    Main application coordinator.
-    
-    Manages lifecycle of all components and handles graceful shutdown.
-    """
-    
-    def __init__(self):
-        """Initialize the market data engine."""
-        # TODO: Initialize components
-        # self.orchestration_service = OrchestrationService()
-        # self.consumer = BinanceWebSocketConsumer(...)
-        # self.api_server = ...
-        pass
-    
-    async def start(self) -> None:
-        """
-        Start all components concurrently.
-        
-        Raises:
-            Exception: If any component fails to start
-        """
-        print("Starting Market Data Engine v0.1.0...")
-        
-        # TODO: Implement startup sequence
-        # 1. Initialize C++ engines for each symbol
-        # 2. Start Binance WebSocket consumer
-        # 3. Start FastAPI server
-        # 4. Start periodic snapshot task
-        
-        # Example structure:
-        # await asyncio.gather(
-        #     self.consumer.start(),
-        #     self.api_server.start(),
-        #     self.orchestration_service.run_snapshot_loop(),
-        # )
-        pass
-    
-    async def stop(self) -> None:
-        """
-        Gracefully shutdown all components.
-        
-        Ensures all data is persisted before exit.
-        """
-        print("Shutting down Market Data Engine...")
-        
-        # TODO: Implement shutdown sequence
-        # 1. Stop accepting new WebSocket messages
-        # 2. Process remaining messages in queue
-        # 3. Save final database snapshot
-        # 4. Close database connections
-        # 5. Close API server
-        
-        print("Shutdown complete.")
+logging.basicConfig(
+    level = getattr(logging, settings.log_level),
+    format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
-
-async def main() -> None:
-    """
-    Application entrypoint.
+async def run_consumer(orchestration: OrchestrationService, shutdown_event: asyncio.Event):
+    """Run Binance WebSocket Consumer."""
+    symbols = settings.symbols.split(",")
     
-    Sets up signal handlers and runs the main event loop.
-    """
-    engine: Optional[MarketDataEngine] = None
+    async def on_trade(trade_data: dict):
+        await orchestration.handle_trade(trade_data)
+    
+    consumer = BinanceWebSocketConsumer(symbols, on_trade_callback=on_trade)
     
     try:
-        engine = MarketDataEngine()
+        # Start consumer as a task
+        consumer_task = asyncio.create_task(consumer.start())
         
-        # Setup signal handlers for graceful shutdown
-        loop = asyncio.get_running_loop()
-        for sig in (signal.SIGTERM, signal.SIGINT):
-            loop.add_signal_handler(
-                sig,
-                lambda: asyncio.create_task(shutdown(engine))
-            )
+        # Wait for shutdown signal
+        await shutdown_event.wait()
         
-        # Start the engine
-        await engine.start()
+        logger.info("Stopping consumer...")
+        consumer.stop()
         
-    except KeyboardInterrupt:
-        print("\nReceived keyboard interrupt")
-    except Exception as e:
-        print(f"Fatal error: {e}", file=sys.stderr)
-        sys.exit(1)
-    finally:
-        if engine:
-            await engine.stop()
-
-
-async def shutdown(engine: MarketDataEngine) -> None:
-    """
-    Handle shutdown signal.
+        # Wait for consumer to finish with timeout
+        try:
+            await asyncio.wait_for(consumer_task, timeout=5.0)
+        except asyncio.TimeoutError:
+            logger.warning("Consumer didn't stop in time, forcing cancellation...")
+            consumer_task.cancel()
+            await asyncio.gather(consumer_task, return_exceptions=True)
+    except asyncio.CancelledError:
+        logger.info("Consumer task cancelled")
+        raise
     
-    Args:
-        engine: The running market data engine instance
-    """
-    await engine.stop()
-    # Stop the event loop
+async def run_api_server(shutdown_event: asyncio.Event):
+    """Run FastAPI server using Uvicorn."""
+    config = uvicorn.Config(
+        app,
+        host=settings.api_host,
+        port=settings.api_port,
+        workers=1,  # Force single worker for proper shutdown
+        log_level=settings.log_level.lower(),
+        lifespan="on"
+    )
+    server = uvicorn.Server(config)
+    
+    # Start server in background
+    server_task = asyncio.create_task(server.serve())
+    
+    # Wait for shutdown signal
+    await shutdown_event.wait()
+    
+    logger.info("Stopping API server...")
+    server.should_exit = True
+    
+    # Wait for server to finish
+    try:
+        await asyncio.wait_for(server_task, timeout=10.0)
+    except asyncio.TimeoutError:
+        logger.warning("API server didn't stop in time, forcing...")
+        server_task.cancel()
+        await asyncio.gather(server_task, return_exceptions=True)
+    
+
+async def main():
+    """Run both consumer and API server concurrently."""
+    logger.info("Starting Market Data Engine...")
+    logger.info(f"Symbols: {settings.symbols}")
+    
+    # Initialize orchestration service
+    orchestration = OrchestrationService()
+    
+    # Make orchestration available to API server
+    import app.api_server
+    app.api_server.orchestration = orchestration
+    
+    # Create shutdown event
+    shutdown_event = asyncio.Event()
+    
+    def signal_handler():
+        """Handle shutdown signals gracefully."""
+        logger.info("Shutdown signal received, cleaning up...")
+        shutdown_event.set()
+    
+    # Register signal handlers
     loop = asyncio.get_running_loop()
-    loop.stop()
-
-
-if __name__ == "__main__":
-    # TODO: Add CLI argument parsing
-    # - --config: Path to config file
-    # - --symbols: Override symbols from CLI
-    # - --log-level: Override log level
-    # - --no-db: Disable database persistence
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        loop.add_signal_handler(sig, signal_handler)
     
+    try:
+        # Start both services
+        await asyncio.gather(
+            run_consumer(orchestration, shutdown_event),
+            run_api_server(shutdown_event)
+        )
+    except asyncio.CancelledError:
+        logger.info("Tasks cancelled")
+    finally:
+        # Remove signal handlers
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            loop.remove_signal_handler(sig)
+        
+        logger.info("Market Data Engine shutdown complete.")
+        
+        
+if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\nApplication terminated by user")
-        sys.exit(0)
+        pass  # Graceful shutdown already handled, suppress traceback

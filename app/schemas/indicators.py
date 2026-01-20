@@ -14,31 +14,22 @@ class IndicatorSnapshot(BaseModel):
     
     symbol: str = Field(..., description="Trading pair symbol (e.g., BTCUSDT)")
     timestamp: datetime = Field(..., description="Snapshot timestamp")
-    last_price: float = Field(..., description="Most recent trade price")
+
     
-    sma: Optional[float] = Field(None, description="Simple Moving Average")
-    ema: Optional[float] = Field(None, description="Exponential Moving Average")
+    # sma: Optional[float] = Field(None, description="Simple Moving Average")
+    # ema: Optional[float] = Field(None, description="Exponential Moving Average")
     rsi: Optional[float] = Field(None, description="Relative Strength Index (0-100)")
-    
-    macd: Optional[float] = Field(None, description="MACD line value")
-    macd_signal: Optional[float] = Field(None, description="MACD signal line")
-    macd_histogram: Optional[float] = Field(None, description="MACD histogram")
-    
-    trade_count: int = Field(..., description="Number of trades in window")
-    
+    vwap: Optional[float] = Field(None, description="Volume Weighted Average Price")
+    # macd: Optional[float] = Field(None, description="MACD line value")
+    # macd_signal: Optional[float] = Field(None, description="MACD signal line")
+    # macd_histogram: Optional[float] = Field(None, description="MACD histogram")
     class Config:
         json_schema_extra = {
             "example": {
                 "symbol": "BTCUSDT",
                 "timestamp": "2026-01-16T10:30:00Z",
-                "last_price": 45123.50,
-                "sma": 45000.25,
-                "ema": 45050.75,
                 "rsi": 62.5,
-                "macd": 125.50,
-                "macd_signal": 115.25,
-                "macd_histogram": 10.25,
-                "trade_count": 487
+                "vwap": 44950.75
             }
         }
 
